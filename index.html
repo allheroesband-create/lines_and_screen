@@ -1,0 +1,266 @@
+<!DOCTYPE html>
+<html lang="ja"><head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>記事タイトル</title>
+    <style>
+        .text-block {
+            text-align: center;
+        }
+        /* ——— base style ——— */
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Hiragino Kaku Gothic ProN','メイリオ','Meiryo',sans-serif;
+            line-height: 2; color: #e0e0e0; background: #000; padding: 0; cursor: none;
+        }
+
+        #cursor {
+            position: fixed; width: 12px; height: 12px; pointer-events: none; z-index: 9999;
+            transform: translate(-50%,-50%);
+            background: radial-gradient(circle,#fff 0%,#fff 40%,#ffeecc 70%,transparent 100%);
+            box-shadow: 0 0 15px #fff,0 0 30px #fff,0 0 45px #ffeecc;
+            clip-path: polygon(50% 0%,61% 35%,98% 35%,68% 57%,79% 91%,50% 70%,21% 91%,32% 57%,2% 35%,39% 35%);
+            animation: starMorph 2s ease-in-out infinite;
+        }
+
+        @keyframes starMorph {
+            0%,100% { clip-path: polygon(50% 0%,61% 35%,98% 35%,68% 57%,79% 91%,50% 70%,21% 91%,32% 57%,2% 35%,39% 35%); }
+            25% { clip-path: polygon(50% 5%,65% 30%,95% 40%,70% 55%,85% 90%,50% 75%,15% 90%,30% 55%,5% 40%,35% 30%); }
+            50% { clip-path: polygon(50% 2%,58% 38%,96% 32%,66% 60%,82% 88%,50% 68%,18% 88%,34% 60%,4% 32%,42% 38%); }
+            75% { clip-path: polygon(50% 8%,63% 33%,92% 38%,72% 58%,77% 93%,50% 72%,23% 93%,28% 58%,8% 38%,37% 33%); }
+        }
+
+        .cursor-trail { position: fixed; width: 4px; height: 4px; border-radius: 50%; pointer-events: none; z-index: 9998; animation: trailFade 2s ease-out forwards; }
+        @keyframes trailFade { 0%{ transform: scale(1); opacity:0.9 } 100%{ transform: scale(0); opacity:0 } }
+
+        .container { max-width:100%; margin:0; background:#000; }
+
+        .top-link { background:#000; padding:15px; text-align:center; border-bottom:1px solid #333; }
+        .top-link a {
+            color:#e0e0e0; text-decoration:none; font-size:1.5em; font-weight:900;
+            letter-spacing:0.3em; position:relative; z-index:2; font-family:'Impact','Arial Black',sans-serif;
+            font-style:italic; text-transform:uppercase; transform:skewX(-10deg); display:inline-block;
+            transition:color .3s;
+        }
+        .top-link a:hover { color:#fff; text-shadow:0 0 10px #9d00ff,0 0 20px #9d00ff; }
+
+        @keyframes firework {
+            0% { transform:translate(calc(-50% + var(--x)*0),calc(-50% + var(--y)*0)) scale(1); opacity:1; }
+            100% { transform:translate(calc(-50% + var(--x)),calc(-50% + var(--y))) scale(0); opacity:0; }
+        }
+        .firework-particle {
+            position:absolute; width:2px; height:2px; border-radius:50%; pointer-events:none;
+            animation:firework 1.2s ease-out forwards;
+        }
+
+        header { color:#fff; padding:10px; text-align:center; border-bottom:1px solid #333; }
+        h1 { font-size:1.4em; margin-bottom:15px; }
+        .meta { font-size:0.75em; color:#999; }
+
+        /* ===== タグセレクタ ===== */
+        .tag-selector {
+            margin-top: 10px;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            justify-content: center;
+            font-size: 0.75em;
+        }
+        .tag-group {
+            background: #111;
+            border: 1px solid #333;
+            border-radius: 999px;
+            padding: 4px 10px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+        .tag-group label {
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            font-weight: 600;
+            color: #bbb;
+        }
+        .tag-group select {
+            background: #000;
+            color: #e0e0e0;
+            border: 1px solid #444;
+            border-radius: 999px;
+            padding: 2px 6px;
+            font-size: 0.75em;
+            outline: none;
+        }
+        .tag-group select:focus {
+            border-color: #9d00ff;
+            box-shadow: 0 0 6px rgba(157,0,255,0.6);
+        }
+
+        article { padding:0; }
+
+        .toolbar {
+            position:sticky; top:0; background:#111; padding:15px; border-bottom:1px solid #333;
+            display:flex; gap:10px; justify-content:center; z-index:100;
+        }
+        .toolbar button {
+            background:#333; color:#e0e0e0; border:1px solid #555; padding:8px 15px;
+            border-radius:3px; cursor:pointer; font-size:0.85em;
+        }
+
+        .content-block { padding:10px; border:1px solid transparent; transition:border-color .3s; position:relative; }
+        .content-block:hover { border-color:#444; }
+
+        .block-controls {
+            position:absolute; top:5px; right:5px; opacity:0; display:flex; gap:5px; transition:opacity .3s;
+        }
+        .content-block:hover .block-controls { opacity:1; }
+
+        .drag-handle { cursor:move; text-align:center; color:#555; font-size:0.8em; padding:5px; user-select:none; }
+        .content-block.dragging { opacity:0.5; }
+
+        .text-block h2 { color:#fff; font-size:0.9em; margin-bottom:10px; }
+        .text-block p { font-size:0.85em; margin-bottom:10px; }
+
+        .image-block img { max-width:100%; border:1px solid #333; }
+        .audio-block audio { width:100%; max-width:500px; }
+
+        /* 動画ブロック用 */
+        .video-block video {
+            width: 100%;
+            max-width: 600px;
+            border: 1px solid #333;
+            display: block;
+            margin: 0 auto;
+        }
+
+        footer { background:#2d3748; color:white; text-align:center; padding:10px; margin-top:20px; }
+
+        .upload-prompt { border:1px dashed #555; padding:20px; text-align:center; cursor:pointer; color:#666; }
+        input[type=file] { display:none; }
+    </style>
+</head>
+
+<body>
+    <div id="cursor"></div>
+
+    <div class="container">
+        <div class="top-link" id="topLink">
+            <a href="../spaceship3.html" target="_blank">SPACESHIP</a>
+        </div>
+
+        <header>
+            <h1>映画の線と面</h1>
+            <div class="meta">公開日: 2025年12月31日 | 著者: 超絶カスーン</div>
+
+            <!-- MODE / AREA / AURA タグの指定 UI -->
+            <div class="tag-selector" style="margin-top: 10px; display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; font-size: 0.75em;"><div style="background: rgb(17, 17, 17); border: 1px solid rgb(51, 51, 51); border-radius: 999px; padding: 4px 10px; color: rgb(187, 187, 187);"><span style="text-transform: uppercase; letter-spacing: 0.08em; font-weight: 600;">MODE:</span> <span style="color: #e0e0e0;">SLOMO</span></div><div style="background: rgb(17, 17, 17); border: 1px solid rgb(51, 51, 51); border-radius: 999px; padding: 4px 10px; color: rgb(187, 187, 187);"><span style="text-transform: uppercase; letter-spacing: 0.08em; font-weight: 600;">AREA:</span> <span style="color: #e0e0e0;">RURAL</span></div><div style="background: rgb(17, 17, 17); border: 1px solid rgb(51, 51, 51); border-radius: 999px; padding: 4px 10px; color: rgb(187, 187, 187);"><span style="text-transform: uppercase; letter-spacing: 0.08em; font-weight: 600;">AURA:</span> <span style="color: #e0e0e0;">BEFORE DAWN</span></div></div>
+        </header>
+
+        
+
+        <!-- エクスポート名入力モーダル -->
+        <div id="exportModal" style="display: none; position: fixed; top: 0px; left: 0px; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.8); z-index: 10000; justify-content: center; align-items: center;">
+            <div style="background:#111; border:2px solid #9d00ff; border-radius:10px; padding:30px; max-width:500px; width:90%;">
+                <h3 style="color:#fff; margin-bottom:20px; text-align:center;">エクスポート設定</h3>
+                
+                <div style="margin-bottom:20px;">
+                    <label style="color:#bbb; display:block; margin-bottom:8px; font-size:0.9em;">HTMLファイル名:</label>
+                    <input type="text" id="htmlFileName" value="article" style="width:100%; padding:10px; background:#000; border:1px solid #444; border-radius:5px; color:#e0e0e0; font-size:1em;">
+                    <div style="color:#666; font-size:0.75em; margin-top:5px;">※ .html は自動的に追加されます</div>
+                </div>
+                
+                <div style="margin-bottom:30px;">
+                    <label style="color:#bbb; display:block; margin-bottom:8px; font-size:0.9em;">ZIPファイル名:</label>
+                    <input type="text" id="zipFileName" value="exported_page" style="width:100%; padding:10px; background:#000; border:1px solid #444; border-radius:5px; color:#e0e0e0; font-size:1em;">
+                    <div style="color:#666; font-size:0.75em; margin-top:5px;">※ .zip は自動的に追加されます</div>
+                </div>
+                
+                <div style="display:flex; gap:10px; justify-content:center;">
+                    <button onclick="cancelExport()" style="background:#333; color:#e0e0e0; border:1px solid #555; padding:10px 30px; border-radius:5px; cursor:pointer; font-size:1em;">キャンセル</button>
+                    <button onclick="confirmExport()" style="background:#9d00ff; color:#fff; border:none; padding:10px 30px; border-radius:5px; cursor:pointer; font-size:1em; font-weight:bold;">エクスポート</button>
+                </div>
+            </div>
+        </div>
+
+        <article id="editor" class="editor-container">
+            <div class="content-block image-block">                        <img src="images/image_0_IMG_5514_2.jpg"></div><div class="content-block text-block">
+                
+                
+                <h2><p style="margin-bottom: 0px; font-style: normal; font-variant-caps: normal; font-weight: normal; font-stretch: normal; font-size: 13px; line-height: normal; font-family: &quot;Helvetica Neue&quot;; font-size-adjust: none; font-kerning: auto; font-variant-alternates: normal; font-variant-ligatures: normal; font-variant-numeric: normal; font-variant-east-asian: normal; font-variant-position: normal; font-variant-emoji: normal; font-feature-settings: normal; font-optical-sizing: auto; font-variation-settings: normal; min-height: 15px;"><br></p>
+<p style="margin-bottom: 0px; font-style: normal; font-variant-caps: normal; font-weight: normal; font-stretch: normal; font-size: 13px; line-height: normal; font-family: &quot;Helvetica Neue&quot;; font-size-adjust: none; font-kerning: auto; font-variant-alternates: normal; font-variant-ligatures: normal; font-variant-numeric: normal; font-variant-east-asian: normal; font-variant-position: normal; font-variant-emoji: normal; font-feature-settings: normal; font-optical-sizing: auto; font-variation-settings: normal;"><b>線的時間の物語映画とリプレイ</b><b></b></p>
+<p style="margin-bottom: 0px; font-style: normal; font-variant-caps: normal; font-weight: normal; font-stretch: normal; font-size: 13px; line-height: normal; font-family: &quot;Helvetica Neue&quot;; font-size-adjust: none; font-kerning: auto; font-variant-alternates: normal; font-variant-ligatures: normal; font-variant-numeric: normal; font-variant-east-asian: normal; font-variant-position: normal; font-variant-emoji: normal; font-feature-settings: normal; font-optical-sizing: auto; font-variation-settings: normal; min-height: 15px;"><br></p>
+<p style="margin-bottom: 0px; font-style: normal; font-variant-caps: normal; font-weight: normal; font-stretch: normal; font-size: 13px; line-height: normal; font-family: &quot;Helvetica Neue&quot;; font-size-adjust: none; font-kerning: auto; font-variant-alternates: normal; font-variant-ligatures: normal; font-variant-numeric: normal; font-variant-east-asian: normal; font-variant-position: normal; font-variant-emoji: normal; font-feature-settings: normal; font-optical-sizing: auto; font-variation-settings: normal;">　強力な因果を骨組みにそえ、線的に進行し、さらにその表面をドーパミンで派手に飾ったような現代商業映画はほとんどプロパカンダ映画的に観客の中で作用する。実際には根も歯もないお話であるものが、巧妙に伏線を張り巡らせ安易なカタルシスへ導くことで観客はそれを情報として納得せざるを得ない。その中にはあり得ないという言葉はなく、論理的に整合性の取れた説明を続け様に与えることで必然性を担保し反論をさせないようにする。そのような映画をみるとき、観客は映画にプラグを差し込まれ情報をただ流し込まれているだけで、もはやほとんどPCに接続された外部ストレージのようになってしまう。</p>
+<p style="margin-bottom: 0px; font-style: normal; font-variant-caps: normal; font-weight: normal; font-stretch: normal; font-size: 13px; line-height: normal; font-family: &quot;Helvetica Neue&quot;; font-size-adjust: none; font-kerning: auto; font-variant-alternates: normal; font-variant-ligatures: normal; font-variant-numeric: normal; font-variant-east-asian: normal; font-variant-position: normal; font-variant-emoji: normal; font-feature-settings: normal; font-optical-sizing: auto; font-variation-settings: normal;">　だから皆そのような映画には同じような感想を言うし、内容が理解できないと自分がバカなのではないかと不安になりネットから他人の感想を探して自分の感想のように振る舞う。</p>
+<p style="margin-bottom: 0px; font-style: normal; font-variant-caps: normal; font-weight: normal; font-stretch: normal; font-size: 13px; line-height: normal; font-family: &quot;Helvetica Neue&quot;; font-size-adjust: none; font-kerning: auto; font-variant-alternates: normal; font-variant-ligatures: normal; font-variant-numeric: normal; font-variant-east-asian: normal; font-variant-position: normal; font-variant-emoji: normal; font-feature-settings: normal; font-optical-sizing: auto; font-variation-settings: normal;">　僕が一部の大作商業映画を嫌う理由はここにある。出来事単体の荒唐無稽さを無かったことにするかのように綺麗で整った物語にして因果関係のパズルの中へ観客を閉じ込める。さらにはそのような閉鎖的な構造ゆえ現実逃避の道具として機能してしまうことすらある。そうなれば文字通り娯楽として働くだけで、それ以外には何も起こしえない。</p>
+<p style="margin-bottom: 0px; font-style: normal; font-variant-caps: normal; font-weight: normal; font-stretch: normal; font-size: 13px; line-height: normal; font-family: &quot;Helvetica Neue&quot;; font-size-adjust: none; font-kerning: auto; font-variant-alternates: normal; font-variant-ligatures: normal; font-variant-numeric: normal; font-variant-east-asian: normal; font-variant-position: normal; font-variant-emoji: normal; font-feature-settings: normal; font-optical-sizing: auto; font-variation-settings: normal; min-height: 15px;"><br></p>
+<p style="margin-bottom: 0px; font-style: normal; font-variant-caps: normal; font-weight: normal; font-stretch: normal; font-size: 13px; line-height: normal; font-family: &quot;Helvetica Neue&quot;; font-size-adjust: none; font-kerning: auto; font-variant-alternates: normal; font-variant-ligatures: normal; font-variant-numeric: normal; font-variant-east-asian: normal; font-variant-position: normal; font-variant-emoji: normal; font-feature-settings: normal; font-optical-sizing: auto; font-variation-settings: normal;">&nbsp;</p>
+<p style="margin-bottom: 0px; font-style: normal; font-variant-caps: normal; font-weight: normal; font-stretch: normal; font-size: 13px; line-height: normal; font-family: &quot;Helvetica Neue&quot;; font-size-adjust: none; font-kerning: auto; font-variant-alternates: normal; font-variant-ligatures: normal; font-variant-numeric: normal; font-variant-east-asian: normal; font-variant-position: normal; font-variant-emoji: normal; font-feature-settings: normal; font-optical-sizing: auto; font-variation-settings: normal;">　クリスマルケルはA Free Replay（Notes on Vertigo）1994の中でこう書いた。</p>
+<p style="margin-bottom: 0px; font-style: normal; font-variant-caps: normal; font-weight: normal; font-stretch: normal; font-size: 13px; line-height: normal; font-family: &quot;Helvetica Neue&quot;; font-size-adjust: none; font-kerning: auto; font-variant-alternates: normal; font-variant-ligatures: normal; font-variant-numeric: normal; font-variant-east-asian: normal; font-variant-position: normal; font-variant-emoji: normal; font-feature-settings: normal; font-optical-sizing: auto; font-variation-settings: normal;">「ビデオゲームが我々にもたらしたものは？</p>
+<p style="margin-bottom: 0px; font-style: normal; font-variant-caps: normal; font-weight: normal; font-stretch: normal; font-size: 13px; line-height: normal; font-family: &quot;Helvetica Neue&quot;; font-size-adjust: none; font-kerning: auto; font-variant-alternates: normal; font-variant-ligatures: normal; font-variant-numeric: normal; font-variant-east-asian: normal; font-variant-position: normal; font-variant-emoji: normal; font-feature-settings: normal; font-optical-sizing: auto; font-variation-settings: normal;">金でも栄誉でもない。</p>
+<p style="margin-bottom: 0px; font-style: normal; font-variant-caps: normal; font-weight: normal; font-stretch: normal; font-size: 13px; line-height: normal; font-family: &quot;Helvetica Neue&quot;; font-size-adjust: none; font-kerning: auto; font-variant-alternates: normal; font-variant-ligatures: normal; font-variant-numeric: normal; font-variant-east-asian: normal; font-variant-position: normal; font-variant-emoji: normal; font-feature-settings: normal; font-optical-sizing: auto; font-variation-settings: normal;">もう一度プレイできることだ。</p>
+<p style="margin-bottom: 0px; font-style: normal; font-variant-caps: normal; font-weight: normal; font-stretch: normal; font-size: 13px; line-height: normal; font-family: &quot;Helvetica Neue&quot;; font-size-adjust: none; font-kerning: auto; font-variant-alternates: normal; font-variant-ligatures: normal; font-variant-numeric: normal; font-variant-east-asian: normal; font-variant-position: normal; font-variant-emoji: normal; font-feature-settings: normal; font-optical-sizing: auto; font-variation-settings: normal;">やり直し。</p>
+<p style="margin-bottom: 0px; font-style: normal; font-variant-caps: normal; font-weight: normal; font-stretch: normal; font-size: 13px; line-height: normal; font-family: &quot;Helvetica Neue&quot;; font-size-adjust: none; font-kerning: auto; font-variant-alternates: normal; font-variant-ligatures: normal; font-variant-numeric: normal; font-variant-east-asian: normal; font-variant-position: normal; font-variant-emoji: normal; font-feature-settings: normal; font-optical-sizing: auto; font-variation-settings: normal;">自由なリプレイ。」</p>
+<p style="margin-bottom: 0px; font-style: normal; font-variant-caps: normal; font-weight: normal; font-stretch: normal; font-size: 13px; line-height: normal; font-family: &quot;Helvetica Neue&quot;; font-size-adjust: none; font-kerning: auto; font-variant-alternates: normal; font-variant-ligatures: normal; font-variant-numeric: normal; font-variant-east-asian: normal; font-variant-position: normal; font-variant-emoji: normal; font-feature-settings: normal; font-optical-sizing: auto; font-variation-settings: normal;">&nbsp;</p><p style="margin-bottom: 0px; font-style: normal; font-variant-caps: normal; font-weight: normal; font-stretch: normal; font-size: 13px; line-height: normal; font-family: &quot;Helvetica Neue&quot;; font-size-adjust: none; font-kerning: auto; font-variant-alternates: normal; font-variant-ligatures: normal; font-variant-numeric: normal; font-variant-east-asian: normal; font-variant-position: normal; font-variant-emoji: normal; font-feature-settings: normal; font-optical-sizing: auto; font-variation-settings: normal;"><br></p>
+<p style="margin-bottom: 0px; font-style: normal; font-variant-caps: normal; font-weight: normal; font-stretch: normal; font-size: 13px; line-height: normal; font-family: &quot;Helvetica Neue&quot;; font-size-adjust: none; font-kerning: auto; font-variant-alternates: normal; font-variant-ligatures: normal; font-variant-numeric: normal; font-variant-east-asian: normal; font-variant-position: normal; font-variant-emoji: normal; font-feature-settings: normal; font-optical-sizing: auto; font-variation-settings: normal;">　ビデオゲーム</p>
+<p style="margin-bottom: 0px; font-style: normal; font-variant-caps: normal; font-weight: normal; font-stretch: normal; font-size: 13px; line-height: normal; font-family: &quot;Helvetica Neue&quot;; font-size-adjust: none; font-kerning: auto; font-variant-alternates: normal; font-variant-ligatures: normal; font-variant-numeric: normal; font-variant-east-asian: normal; font-variant-position: normal; font-variant-emoji: normal; font-feature-settings: normal; font-optical-sizing: auto; font-variation-settings: normal;">　時間巻き戻しアニメ</p>
+<p style="margin-bottom: 0px; font-style: normal; font-variant-caps: normal; font-weight: normal; font-stretch: normal; font-size: 13px; line-height: normal; font-family: &quot;Helvetica Neue&quot;; font-size-adjust: none; font-kerning: auto; font-variant-alternates: normal; font-variant-ligatures: normal; font-variant-numeric: normal; font-variant-east-asian: normal; font-variant-position: normal; font-variant-emoji: normal; font-feature-settings: normal; font-optical-sizing: auto; font-variation-settings: normal;">　レトロブーム</p>
+<p style="margin-bottom: 0px; font-style: normal; font-variant-caps: normal; font-weight: normal; font-stretch: normal; font-size: 13px; line-height: normal; font-family: &quot;Helvetica Neue&quot;; font-size-adjust: none; font-kerning: auto; font-variant-alternates: normal; font-variant-ligatures: normal; font-variant-numeric: normal; font-variant-east-asian: normal; font-variant-position: normal; font-variant-emoji: normal; font-feature-settings: normal; font-optical-sizing: auto; font-variation-settings: normal;">　ノスタルジーブーム</p>
+<p style="margin-bottom: 0px; font-style: normal; font-variant-caps: normal; font-weight: normal; font-stretch: normal; font-size: 13px; line-height: normal; font-family: &quot;Helvetica Neue&quot;; font-size-adjust: none; font-kerning: auto; font-variant-alternates: normal; font-variant-ligatures: normal; font-variant-numeric: normal; font-variant-east-asian: normal; font-variant-position: normal; font-variant-emoji: normal; font-feature-settings: normal; font-optical-sizing: auto; font-variation-settings: normal;">　ルーティーン</p>
+<p style="margin-bottom: 0px; font-style: normal; font-variant-caps: normal; font-weight: normal; font-stretch: normal; font-size: 13px; line-height: normal; font-family: &quot;Helvetica Neue&quot;; font-size-adjust: none; font-kerning: auto; font-variant-alternates: normal; font-variant-ligatures: normal; font-variant-numeric: normal; font-variant-east-asian: normal; font-variant-position: normal; font-variant-emoji: normal; font-feature-settings: normal; font-optical-sizing: auto; font-variation-settings: normal;">　ショート動画</p>
+<p style="margin-bottom: 0px; font-style: normal; font-variant-caps: normal; font-weight: normal; font-stretch: normal; font-size: 13px; line-height: normal; font-family: &quot;Helvetica Neue&quot;; font-size-adjust: none; font-kerning: auto; font-variant-alternates: normal; font-variant-ligatures: normal; font-variant-numeric: normal; font-variant-east-asian: normal; font-variant-position: normal; font-variant-emoji: normal; font-feature-settings: normal; font-optical-sizing: auto; font-variation-settings: normal;">&nbsp;</p>
+<p style="margin-bottom: 0px; font-style: normal; font-variant-caps: normal; font-weight: normal; font-stretch: normal; font-size: 13px; line-height: normal; font-family: &quot;Helvetica Neue&quot;; font-size-adjust: none; font-kerning: auto; font-variant-alternates: normal; font-variant-ligatures: normal; font-variant-numeric: normal; font-variant-east-asian: normal; font-variant-position: normal; font-variant-emoji: normal; font-feature-settings: normal; font-optical-sizing: auto; font-variation-settings: normal;">　それらは全て線的に解釈された時間をリプレイさせる構造を持っている。過ぎ去る過去を現在に固定し、再生させようする試みと言えるだろう。しかし、そのような空虚な試みは、報われることがなく残るものは何もない。</p>
+<p style="margin-bottom: 0px; font-style: normal; font-variant-caps: normal; font-weight: normal; font-stretch: normal; font-size: 13px; line-height: normal; font-family: &quot;Helvetica Neue&quot;; font-size-adjust: none; font-kerning: auto; font-variant-alternates: normal; font-variant-ligatures: normal; font-variant-numeric: normal; font-variant-east-asian: normal; font-variant-position: normal; font-variant-emoji: normal; font-feature-settings: normal; font-optical-sizing: auto; font-variation-settings: normal;">　ヒッチコックの「めまい」では、死んだマデリンを時間を超えて取り戻そうとするスコティが、ジュディをマデリンへ限りなく近づけることで２度目の人生（愛）という最大の幸福を得ようとする。</p>
+<p style="margin-bottom: 0px; font-style: normal; font-variant-caps: normal; font-weight: normal; font-stretch: normal; font-size: 13px; line-height: normal; font-family: &quot;Helvetica Neue&quot;; font-size-adjust: none; font-kerning: auto; font-variant-alternates: normal; font-variant-ligatures: normal; font-variant-numeric: normal; font-variant-east-asian: normal; font-variant-position: normal; font-variant-emoji: normal; font-feature-settings: normal; font-optical-sizing: auto; font-variation-settings: normal;">そして彼は映画終盤、塔の中でジュディへいう。</p>
+<p style="margin-bottom: 0px; font-style: normal; font-variant-caps: normal; font-weight: normal; font-stretch: normal; font-size: 13px; line-height: normal; font-family: &quot;Helvetica Neue&quot;; font-size-adjust: none; font-kerning: auto; font-variant-alternates: normal; font-variant-ligatures: normal; font-variant-numeric: normal; font-variant-east-asian: normal; font-variant-position: normal; font-variant-emoji: normal; font-feature-settings: normal; font-optical-sizing: auto; font-variation-settings: normal;">　「君は僕の二度目のチャンスなんだよ！」</p>
+<p style="margin-bottom: 0px; font-style: normal; font-variant-caps: normal; font-weight: normal; font-stretch: normal; font-size: 13px; line-height: normal; font-family: &quot;Helvetica Neue&quot;; font-size-adjust: none; font-kerning: auto; font-variant-alternates: normal; font-variant-ligatures: normal; font-variant-numeric: normal; font-variant-east-asian: normal; font-variant-position: normal; font-variant-emoji: normal; font-feature-settings: normal; font-optical-sizing: auto; font-variation-settings: normal;">しかし彼がその後経験するのは二度目の死という最大の悲劇なのだ。</p>
+<p style="margin-bottom: 0px; font-style: normal; font-variant-caps: normal; font-weight: normal; font-stretch: normal; font-size: 13px; line-height: normal; font-family: &quot;Helvetica Neue&quot;; font-size-adjust: none; font-kerning: auto; font-variant-alternates: normal; font-variant-ligatures: normal; font-variant-numeric: normal; font-variant-east-asian: normal; font-variant-position: normal; font-variant-emoji: normal; font-feature-settings: normal; font-optical-sizing: auto; font-variation-settings: normal;">まさにその出口のない時間の迷宮それ自体が、映画序盤のタイトルバックへ映し出される幾何学的な螺旋のめまいである。</p>
+<p style="margin-bottom: 0px; font-style: normal; font-variant-caps: normal; font-weight: normal; font-stretch: normal; font-size: 13px; line-height: normal; font-family: &quot;Helvetica Neue&quot;; font-size-adjust: none; font-kerning: auto; font-variant-alternates: normal; font-variant-ligatures: normal; font-variant-numeric: normal; font-variant-east-asian: normal; font-variant-position: normal; font-variant-emoji: normal; font-feature-settings: normal; font-optical-sizing: auto; font-variation-settings: normal;">そしてそこに線的時間の物語の限界さえも同時に描かれている。</p>
+<p style="margin-bottom: 0px; font-style: normal; font-variant-caps: normal; font-weight: normal; font-stretch: normal; font-size: 13px; line-height: normal; font-family: &quot;Helvetica Neue&quot;; font-size-adjust: none; font-kerning: auto; font-variant-alternates: normal; font-variant-ligatures: normal; font-variant-numeric: normal; font-variant-east-asian: normal; font-variant-position: normal; font-variant-emoji: normal; font-feature-settings: normal; font-optical-sizing: auto; font-variation-settings: normal; min-height: 15px;"><br></p>
+<p style="margin-bottom: 0px; font-style: normal; font-variant-caps: normal; font-weight: normal; font-stretch: normal; font-size: 13px; line-height: normal; font-family: &quot;Helvetica Neue&quot;; font-size-adjust: none; font-kerning: auto; font-variant-alternates: normal; font-variant-ligatures: normal; font-variant-numeric: normal; font-variant-east-asian: normal; font-variant-position: normal; font-variant-emoji: normal; font-feature-settings: normal; font-optical-sizing: auto; font-variation-settings: normal; min-height: 15px;"><br></p><p style="margin-bottom: 0px; font-style: normal; font-variant-caps: normal; font-weight: normal; font-stretch: normal; font-size: 13px; line-height: normal; font-family: &quot;Helvetica Neue&quot;; font-size-adjust: none; font-kerning: auto; font-variant-alternates: normal; font-variant-ligatures: normal; font-variant-numeric: normal; font-variant-east-asian: normal; font-variant-position: normal; font-variant-emoji: normal; font-feature-settings: normal; font-optical-sizing: auto; font-variation-settings: normal; min-height: 15px;"><br></p><p style="margin-bottom: 0px; font-style: normal; font-variant-caps: normal; font-weight: normal; font-stretch: normal; font-size: 13px; line-height: normal; font-family: &quot;Helvetica Neue&quot;; font-size-adjust: none; font-kerning: auto; font-variant-alternates: normal; font-variant-ligatures: normal; font-variant-numeric: normal; font-variant-east-asian: normal; font-variant-position: normal; font-variant-emoji: normal; font-feature-settings: normal; font-optical-sizing: auto; font-variation-settings: normal; min-height: 15px;"><br></p>
+<p style="margin-bottom: 0px; font-style: normal; font-variant-caps: normal; font-weight: normal; font-stretch: normal; font-size: 13px; line-height: normal; font-family: &quot;Helvetica Neue&quot;; font-size-adjust: none; font-kerning: auto; font-variant-alternates: normal; font-variant-ligatures: normal; font-variant-numeric: normal; font-variant-east-asian: normal; font-variant-position: normal; font-variant-emoji: normal; font-feature-settings: normal; font-optical-sizing: auto; font-variation-settings: normal;"><b>面的な時間としての映画</b><b></b></p>
+<p style="margin-bottom: 0px; font-style: normal; font-variant-caps: normal; font-weight: normal; font-stretch: normal; font-size: 13px; line-height: normal; font-family: &quot;Helvetica Neue&quot;; font-size-adjust: none; font-kerning: auto; font-variant-alternates: normal; font-variant-ligatures: normal; font-variant-numeric: normal; font-variant-east-asian: normal; font-variant-position: normal; font-variant-emoji: normal; font-feature-settings: normal; font-optical-sizing: auto; font-variation-settings: normal; min-height: 15px;"><br></p>
+<p style="margin-bottom: 0px; font-style: normal; font-variant-caps: normal; font-weight: normal; font-stretch: normal; font-size: 13px; line-height: normal; font-family: &quot;Helvetica Neue&quot;; font-size-adjust: none; font-kerning: auto; font-variant-alternates: normal; font-variant-ligatures: normal; font-variant-numeric: normal; font-variant-east-asian: normal; font-variant-position: normal; font-variant-emoji: normal; font-feature-settings: normal; font-optical-sizing: auto; font-variation-settings: normal;">ロベルト・ロッセリーニは、「物事が起こる前には必ず待機の時間があり、自分はその起こる物事よりはしばしば待機の時間のほうを描写してしまい、そのために自分は大いに批判されてきた」と語っている。ロッセリーニのいう待機の時間とは具体的に言えば、線的でスペクタクルとカタルシスを軸に据えた物語の中では本来切って捨てても構わないとされる「何も起きない時間」である。</p><p style="margin-bottom: 0px; font-style: normal; font-variant-caps: normal; font-weight: normal; font-stretch: normal; font-size: 13px; line-height: normal; font-family: &quot;Helvetica Neue&quot;; font-size-adjust: none; font-kerning: auto; font-variant-alternates: normal; font-variant-ligatures: normal; font-variant-numeric: normal; font-variant-east-asian: normal; font-variant-position: normal; font-variant-emoji: normal; font-feature-settings: normal; font-optical-sizing: auto; font-variation-settings: normal;"><br></p>
+<p style="margin-bottom: 0px; font-style: normal; font-variant-caps: normal; font-weight: normal; font-stretch: normal; font-size: 13px; line-height: normal; font-family: &quot;Helvetica Neue&quot;; font-size-adjust: none; font-kerning: auto; font-variant-alternates: normal; font-variant-ligatures: normal; font-variant-numeric: normal; font-variant-east-asian: normal; font-variant-position: normal; font-variant-emoji: normal; font-feature-settings: normal; font-optical-sizing: auto; font-variation-settings: normal;">　「イタリア旅行」では、ジルドゥルーズが「見者」と呼んだ主演女優のイングリッドバーグマンが喧嘩している夫のジョージサンダースに怒りを覚えながらも、ナポリの町で車を走らせる。その長いドライブシーンではイングリッドバーグマンの目に映るナポリの町と彼女の顔のカットバックが長く繰り返される。彼女の表情の変化は非常に微妙なもので心理的な状況の変化を捉えることは難しい。さらにナポリの町をうつす映像も細部まで構図が計算された綺麗な映像ではなく、ほとんどただ撮っただけというようなラフなものばかりだ。だから僕たち観客は戸惑う。そして映画中、夫妻のやり取りもほとんどなく無言の微妙な反応を繰り返す。この映画はラストで群衆の「奇跡だ！」という声と共に突然和解の言葉を交わして終わるわけだが、その和解に至るまでの2人の心理的変化を追い続けることはほとんど不可能である。しかし、その「奇跡だ！」の前にある何も起きない時間がその出来事の真実性を確実に担保している。観客は彼の映画の中において、決定的な変化が起こる過程をつねに追う必要はない、もしくは追うことができないと感じるのだ。</p><p style="margin-bottom: 0px; font-style: normal; font-variant-caps: normal; font-weight: normal; font-stretch: normal; font-size: 13px; line-height: normal; font-family: &quot;Helvetica Neue&quot;; font-size-adjust: none; font-kerning: auto; font-variant-alternates: normal; font-variant-ligatures: normal; font-variant-numeric: normal; font-variant-east-asian: normal; font-variant-position: normal; font-variant-emoji: normal; font-feature-settings: normal; font-optical-sizing: auto; font-variation-settings: normal;"><br></p>
+<p style="margin-bottom: 0px; font-style: normal; font-variant-caps: normal; font-weight: normal; font-stretch: normal; font-size: 13px; line-height: normal; font-family: &quot;Helvetica Neue&quot;; font-size-adjust: none; font-kerning: auto; font-variant-alternates: normal; font-variant-ligatures: normal; font-variant-numeric: normal; font-variant-east-asian: normal; font-variant-position: normal; font-variant-emoji: normal; font-feature-settings: normal; font-optical-sizing: auto; font-variation-settings: normal;">　この「イタリア旅行」のように、ロッセリーニの映画では強固な因果関係で結ばれた線的な出来事が映画の動力源になることはない。何も起きない時間を経て顕在化する「ある出来事」を僕たちは予想することすら許されず、ただ観察者としてスクリーンの前へ座り事後的に了解するのみだ。</p>
+<p style="margin-bottom: 0px; font-style: normal; font-variant-caps: normal; font-weight: normal; font-stretch: normal; font-size: 13px; line-height: normal; font-family: &quot;Helvetica Neue&quot;; font-size-adjust: none; font-kerning: auto; font-variant-alternates: normal; font-variant-ligatures: normal; font-variant-numeric: normal; font-variant-east-asian: normal; font-variant-position: normal; font-variant-emoji: normal; font-feature-settings: normal; font-optical-sizing: auto; font-variation-settings: normal;">　私はその何も起きない時間を物語的な線的時間に対して、面的な時間と呼んでいる。バーグマンはそのとき関係のない過去の思い出を思い出しているかもしれないし、夫との様々な出来事の断片を思い起こしているかもしれない。あるいは夫とのこれからの未来のことを考えているのかもしれない。そのような曖昧で因果の鎖で繋がれていない過去や未来の様々な断片が、現れては消えまた現れては消えているのが、ロッセリーニの顕微鏡的なカメラの使い方によって限界まで引き上げられた僕たちの「見ること」がとらえる。</p>
+<p style="margin-bottom: 0px; font-style: normal; font-variant-caps: normal; font-weight: normal; font-stretch: normal; font-size: 13px; line-height: normal; font-family: &quot;Helvetica Neue&quot;; font-size-adjust: none; font-kerning: auto; font-variant-alternates: normal; font-variant-ligatures: normal; font-variant-numeric: normal; font-variant-east-asian: normal; font-variant-position: normal; font-variant-emoji: normal; font-feature-settings: normal; font-optical-sizing: auto; font-variation-settings: normal;">&nbsp;</p>
+<p style="margin-bottom: 0px; font-style: normal; font-variant-caps: normal; font-weight: normal; font-stretch: normal; font-size: 13px; line-height: normal; font-family: &quot;Helvetica Neue&quot;; font-size-adjust: none; font-kerning: auto; font-variant-alternates: normal; font-variant-ligatures: normal; font-variant-numeric: normal; font-variant-east-asian: normal; font-variant-position: normal; font-variant-emoji: normal; font-feature-settings: normal; font-optical-sizing: auto; font-variation-settings: normal;">　「イタリア旅行」は面的時間の中でもとりわけ内面の心理的な風景を鑑賞者に見てとらせる形で描いているが、他にもヌーヴェルヴァーグの作家たちをはじめ、ルイスブニュエル、ベルイマン、タルコフスキーやパラジャーノフ、ペドロコスタやマノエルドオリヴェイラなどのポルトガルの作家たち、キアロスタミやジャファルパナヒなどのイランの作家たちなどが時には空間として見える形で、また時には同じように顕微鏡的にカメラを使い些細な動きから見てとらせるような形で、またあるときはより過激な形で面的な時間を美しく構成している。</p>
+<p style="margin-bottom: 0px; font-style: normal; font-variant-caps: normal; font-weight: normal; font-stretch: normal; font-size: 13px; line-height: normal; font-family: &quot;Helvetica Neue&quot;; font-size-adjust: none; font-kerning: auto; font-variant-alternates: normal; font-variant-ligatures: normal; font-variant-numeric: normal; font-variant-east-asian: normal; font-variant-position: normal; font-variant-emoji: normal; font-feature-settings: normal; font-optical-sizing: auto; font-variation-settings: normal;">　そして、面的に構成された時間中では、現れて消えていく物事に対して、僕たちが一定の必然性があるかどうかを判断する必要はない。</p>
+<p style="margin-bottom: 0px; font-style: normal; font-variant-caps: normal; font-weight: normal; font-stretch: normal; font-size: 13px; line-height: normal; font-family: &quot;Helvetica Neue&quot;; font-size-adjust: none; font-kerning: auto; font-variant-alternates: normal; font-variant-ligatures: normal; font-variant-numeric: normal; font-variant-east-asian: normal; font-variant-position: normal; font-variant-emoji: normal; font-feature-settings: normal; font-optical-sizing: auto; font-variation-settings: normal;">それらの映画では、スクリーンの中で起こったことを、ただ起こってしまっていることとして観ることを可能にさせる。</p>
+<p style="margin-bottom: 0px; font-style: normal; font-variant-caps: normal; font-weight: normal; font-stretch: normal; font-size: 13px; line-height: normal; font-family: &quot;Helvetica Neue&quot;; font-size-adjust: none; font-kerning: auto; font-variant-alternates: normal; font-variant-ligatures: normal; font-variant-numeric: normal; font-variant-east-asian: normal; font-variant-position: normal; font-variant-emoji: normal; font-feature-settings: normal; font-optical-sizing: auto; font-variation-settings: normal;">映像とは言葉やテキストよりも圧倒的に具体性を持ったものなのだから本来的にそのような形式の方が得意なはずなのだ。</p>
+<p style="margin-bottom: 0px; font-style: normal; font-variant-caps: normal; font-weight: normal; font-stretch: normal; font-size: 13px; line-height: normal; font-family: &quot;Helvetica Neue&quot;; font-size-adjust: none; font-kerning: auto; font-variant-alternates: normal; font-variant-ligatures: normal; font-variant-numeric: normal; font-variant-east-asian: normal; font-variant-position: normal; font-variant-emoji: normal; font-feature-settings: normal; font-optical-sizing: auto; font-variation-settings: normal;">&nbsp;</p>
+<p style="margin-bottom: 0px; font-style: normal; font-variant-caps: normal; font-weight: normal; font-stretch: normal; font-size: 13px; line-height: normal; font-family: &quot;Helvetica Neue&quot;; font-size-adjust: none; font-kerning: auto; font-variant-alternates: normal; font-variant-ligatures: normal; font-variant-numeric: normal; font-variant-east-asian: normal; font-variant-position: normal; font-variant-emoji: normal; font-feature-settings: normal; font-optical-sizing: auto; font-variation-settings: normal;">　ミゲルゴメスは最新作「グランドツアー」のTOHOシネマズシャンテでの上映の際、最近の映画は観客と映画とのパワーバランスがおかしくなっていると言っていた。</p>
+<p style="margin-bottom: 0px; font-style: normal; font-variant-caps: normal; font-weight: normal; font-stretch: normal; font-size: 13px; line-height: normal; font-family: &quot;Helvetica Neue&quot;; font-size-adjust: none; font-kerning: auto; font-variant-alternates: normal; font-variant-ligatures: normal; font-variant-numeric: normal; font-variant-east-asian: normal; font-variant-position: normal; font-variant-emoji: normal; font-feature-settings: normal; font-optical-sizing: auto; font-variation-settings: normal;">私たちは、面的時間を持った映画の前でやっとスクリーンの前にただ座る観察者となることができ、観察者となった時にはじめて映画と対等の関係を築くことができるのである。</p>
+<p style="margin-bottom: 0px; font-style: normal; font-variant-caps: normal; font-weight: normal; font-stretch: normal; font-size: 13px; line-height: normal; font-family: &quot;Helvetica Neue&quot;; font-size-adjust: none; font-kerning: auto; font-variant-alternates: normal; font-variant-ligatures: normal; font-variant-numeric: normal; font-variant-east-asian: normal; font-variant-position: normal; font-variant-emoji: normal; font-feature-settings: normal; font-optical-sizing: auto; font-variation-settings: normal;">&nbsp;</p>
+<p style="margin-bottom: 0px; font-style: normal; font-variant-caps: normal; font-weight: normal; font-stretch: normal; font-size: 13px; line-height: normal; font-family: &quot;Helvetica Neue&quot;; font-size-adjust: none; font-kerning: auto; font-variant-alternates: normal; font-variant-ligatures: normal; font-variant-numeric: normal; font-variant-east-asian: normal; font-variant-position: normal; font-variant-emoji: normal; font-feature-settings: normal; font-optical-sizing: auto; font-variation-settings: normal;">　ところで、</p>
+<p style="margin-bottom: 0px; font-style: normal; font-variant-caps: normal; font-weight: normal; font-stretch: normal; font-size: 13px; line-height: normal; font-family: &quot;Helvetica Neue&quot;; font-size-adjust: none; font-kerning: auto; font-variant-alternates: normal; font-variant-ligatures: normal; font-variant-numeric: normal; font-variant-east-asian: normal; font-variant-position: normal; font-variant-emoji: normal; font-feature-settings: normal; font-optical-sizing: auto; font-variation-settings: normal;">今この瞬間に確かに存在している自分というまさにこの一点に到達するまでを物語形式で正確に語ることができるだろうか？</p>
+<p style="margin-bottom: 0px; font-style: normal; font-variant-caps: normal; font-weight: normal; font-stretch: normal; font-size: 13px; line-height: normal; font-family: &quot;Helvetica Neue&quot;; font-size-adjust: none; font-kerning: auto; font-variant-alternates: normal; font-variant-ligatures: normal; font-variant-numeric: normal; font-variant-east-asian: normal; font-variant-position: normal; font-variant-emoji: normal; font-feature-settings: normal; font-optical-sizing: auto; font-variation-settings: normal;">それは、私にはほとんど不可能なように思う。</p>
+<p style="margin-bottom: 0px; font-style: normal; font-variant-caps: normal; font-weight: normal; font-stretch: normal; font-size: 13px; line-height: normal; font-family: &quot;Helvetica Neue&quot;; font-size-adjust: none; font-kerning: auto; font-variant-alternates: normal; font-variant-ligatures: normal; font-variant-numeric: normal; font-variant-east-asian: normal; font-variant-position: normal; font-variant-emoji: normal; font-feature-settings: normal; font-optical-sizing: auto; font-variation-settings: normal;">だからウディアレンは自伝的な映画を制作するものの、それがナラティブを強く重視したつくりであるため何度も作り直さないと気が済まない。（それはそれで正直ではあるが）</p>
+<p style="margin-bottom: 0px; font-style: normal; font-variant-caps: normal; font-weight: normal; font-stretch: normal; font-size: 13px; line-height: normal; font-family: &quot;Helvetica Neue&quot;; font-size-adjust: none; font-kerning: auto; font-variant-alternates: normal; font-variant-ligatures: normal; font-variant-numeric: normal; font-variant-east-asian: normal; font-variant-position: normal; font-variant-emoji: normal; font-feature-settings: normal; font-optical-sizing: auto; font-variation-settings: normal;">しかし同じく自伝的要素の強い映画を作るフェリーニは、より断片的な出来事の羅列（個々の出来事が浮遊するように漂い、安易に他の出来事に結びつかない）を現れては消えていくという面的な時間として構成することで無理に因果の鎖で繋ぐことを避け、ただの自分の印象としての解像度の高い過去や現在を立ち上がらせることに成功している。</p>
+<p style="margin-bottom: 0px; font-style: normal; font-variant-caps: normal; font-weight: normal; font-stretch: normal; font-size: 13px; line-height: normal; font-family: &quot;Helvetica Neue&quot;; font-size-adjust: none; font-kerning: auto; font-variant-alternates: normal; font-variant-ligatures: normal; font-variant-numeric: normal; font-variant-east-asian: normal; font-variant-position: normal; font-variant-emoji: normal; font-feature-settings: normal; font-optical-sizing: auto; font-variation-settings: normal; min-height: 15px;"><br></p>
+<p style="margin-bottom: 0px; font-style: normal; font-variant-caps: normal; font-weight: normal; font-stretch: normal; font-size: 13px; line-height: normal; font-family: &quot;Helvetica Neue&quot;; font-size-adjust: none; font-kerning: auto; font-variant-alternates: normal; font-variant-ligatures: normal; font-variant-numeric: normal; font-variant-east-asian: normal; font-variant-position: normal; font-variant-emoji: normal; font-feature-settings: normal; font-optical-sizing: auto; font-variation-settings: normal; min-height: 15px;"><br></p>
+<p style="margin-bottom: 0px; font-style: normal; font-variant-caps: normal; font-weight: normal; font-stretch: normal; font-size: 13px; line-height: normal; font-family: &quot;Helvetica Neue&quot;; font-size-adjust: none; font-kerning: auto; font-variant-alternates: normal; font-variant-ligatures: normal; font-variant-numeric: normal; font-variant-east-asian: normal; font-variant-position: normal; font-variant-emoji: normal; font-feature-settings: normal; font-optical-sizing: auto; font-variation-settings: normal; min-height: 15px;"><br></p><p style="margin-bottom: 0px; font-style: normal; font-variant-caps: normal; font-weight: normal; font-stretch: normal; font-size: 13px; line-height: normal; font-family: &quot;Helvetica Neue&quot;; font-size-adjust: none; font-kerning: auto; font-variant-alternates: normal; font-variant-ligatures: normal; font-variant-numeric: normal; font-variant-east-asian: normal; font-variant-position: normal; font-variant-emoji: normal; font-feature-settings: normal; font-optical-sizing: auto; font-variation-settings: normal; min-height: 15px;"><br></p>
+<p style="margin-bottom: 0px; font-style: normal; font-variant-caps: normal; font-weight: normal; font-stretch: normal; font-size: 13px; line-height: normal; font-family: &quot;Helvetica Neue&quot;; font-size-adjust: none; font-kerning: auto; font-variant-alternates: normal; font-variant-ligatures: normal; font-variant-numeric: normal; font-variant-east-asian: normal; font-variant-position: normal; font-variant-emoji: normal; font-feature-settings: normal; font-optical-sizing: auto; font-variation-settings: normal;"><b>だって面だから</b><b></b></p>
+<p style="margin-bottom: 0px; font-style: normal; font-variant-caps: normal; font-weight: normal; font-stretch: normal; font-size: 13px; line-height: normal; font-family: &quot;Helvetica Neue&quot;; font-size-adjust: none; font-kerning: auto; font-variant-alternates: normal; font-variant-ligatures: normal; font-variant-numeric: normal; font-variant-east-asian: normal; font-variant-position: normal; font-variant-emoji: normal; font-feature-settings: normal; font-optical-sizing: auto; font-variation-settings: normal;">&nbsp;</p>
+<p style="margin-bottom: 0px; font-style: normal; font-variant-caps: normal; font-weight: normal; font-stretch: normal; font-size: 13px; line-height: normal; font-family: &quot;Helvetica Neue&quot;; font-size-adjust: none; font-kerning: auto; font-variant-alternates: normal; font-variant-ligatures: normal; font-variant-numeric: normal; font-variant-east-asian: normal; font-variant-position: normal; font-variant-emoji: normal; font-feature-settings: normal; font-optical-sizing: auto; font-variation-settings: normal;">　最後に面的に構成された映画は簡単に悲観的な映画へ陥らないことを付け加えておこう。</p>
+<p style="margin-bottom: 0px; font-style: normal; font-variant-caps: normal; font-weight: normal; font-stretch: normal; font-size: 13px; line-height: normal; font-family: &quot;Helvetica Neue&quot;; font-size-adjust: none; font-kerning: auto; font-variant-alternates: normal; font-variant-ligatures: normal; font-variant-numeric: normal; font-variant-east-asian: normal; font-variant-position: normal; font-variant-emoji: normal; font-feature-settings: normal; font-optical-sizing: auto; font-variation-settings: normal;">&nbsp;</p>
+<p style="margin-bottom: 0px; font-style: normal; font-variant-caps: normal; font-weight: normal; font-stretch: normal; font-size: 13px; line-height: normal; font-family: &quot;Helvetica Neue&quot;; font-size-adjust: none; font-kerning: auto; font-variant-alternates: normal; font-variant-ligatures: normal; font-variant-numeric: normal; font-variant-east-asian: normal; font-variant-position: normal; font-variant-emoji: normal; font-feature-settings: normal; font-optical-sizing: auto; font-variation-settings: normal;">　リンチ映画で主人公が奇々怪界な出来事に巻き込まれ、何をしたらいいのかわからなくなり、また別の奇妙で悲惨なことが起きてしまう。しかしそれでも不思議と僕らは彼に行き詰まりを感じない。</p>
+<p style="margin-bottom: 0px; font-style: normal; font-variant-caps: normal; font-weight: normal; font-stretch: normal; font-size: 13px; line-height: normal; font-family: &quot;Helvetica Neue&quot;; font-size-adjust: none; font-kerning: auto; font-variant-alternates: normal; font-variant-ligatures: normal; font-variant-numeric: normal; font-variant-east-asian: normal; font-variant-position: normal; font-variant-emoji: normal; font-feature-settings: normal; font-optical-sizing: auto; font-variation-settings: normal;">ペドロコスタの「ヴァンダの部屋」で、ヴァンダの家が近いうちに取り壊されるかもしれなくても、分厚い電話帳の中に挟んであったコカインが見つからなくなっても、咳と痰が止まらなくベッドが痰で汚れても、親戚が逮捕されても、未来が見えなくてもヴァンダの中に行き止まりを僕らが想像することはできない。</p>
+<p style="margin-bottom: 0px; font-style: normal; font-variant-caps: normal; font-weight: normal; font-stretch: normal; font-size: 13px; line-height: normal; font-family: &quot;Helvetica Neue&quot;; font-size-adjust: none; font-kerning: auto; font-variant-alternates: normal; font-variant-ligatures: normal; font-variant-numeric: normal; font-variant-east-asian: normal; font-variant-position: normal; font-variant-emoji: normal; font-feature-settings: normal; font-optical-sizing: auto; font-variation-settings: normal;">挙げ続ければキリがないが、</p>
+<p style="margin-bottom: 0px; font-style: normal; font-variant-caps: normal; font-weight: normal; font-stretch: normal; font-size: 13px; line-height: normal; font-family: &quot;Hiragino Sans&quot;; font-size-adjust: none; font-kerning: auto; font-variant-alternates: normal; font-variant-ligatures: normal; font-variant-numeric: normal; font-variant-east-asian: normal; font-variant-position: normal; font-variant-emoji: normal; font-feature-settings: normal; font-optical-sizing: auto; font-variation-settings: normal;">面的に構成されている映画は、幸か不幸か、時間の漂いを途中で封鎖するすべを持たない。</p></h2>
+                <p><br></p>
+                <p><br></p>
+            </div>
+        </article>
+
+        <footer>
+            <p>© 2025 HOME///SPACESHIP. All rights reserved.</p>
+        </footer>
+    </div>
+
+    <!-- JSZip -->
+    
+
+    
+
+
+</body></html>
